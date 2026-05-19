@@ -25,7 +25,8 @@ join
         sum(cost_ad)            as cost,
         sum(case when adv_deal_order_price < 100000 then adv_deal_order_price else 0 end) as gmv
     from ad.ad_r_olap_full_site_report
-    where dt = '${hive_date}'
+    where dt >= '${start_date}'
+      and dt <= '${hive_date}'
       and campaign_type = '101'
       and (period_order_track = '0' or period_order_track is null or period_order_track = '')
       and periods in ('0', '1')

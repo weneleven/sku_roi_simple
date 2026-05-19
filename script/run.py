@@ -15,12 +15,15 @@ def run(conf, args):
 
     base_day = datetime.datetime.strptime(args.date, '%Y%m%d')
     day_before = config.getint('hadoop', 'day_before')
+    agg_days = config.getint('hadoop', 'agg_days')
     run_day = base_day - datetime.timedelta(day_before)
     run_date = run_day.strftime('%Y%m%d')
     hive_date = run_day.strftime('%Y-%m-%d')
-    logging.info('Running date is %s' % run_date)
+    start_day = run_day - datetime.timedelta(agg_days - 1)
+    start_date = start_day.strftime('%Y-%m-%d')
+    logging.info('Running date is %s, aggregating from %s to %s (%d days)' % (run_date, start_date, hive_date, agg_days))
 
-    # 检查分区
+    # 检查分区（范围表用当天，效果表用聚合区间）
     util.check_hive_partition_by_date('ad.ad_recommend_sku_feature', hive_date)
     util.check_hive_partition_by_date('ad.ad_r_olap_full_site_report', hive_date)
 
@@ -31,7 +34,7 @@ def run(conf, args):
 
     # 提交 Hive
     hive_hql = config.get('hadoop', 'hive_hql')
-    cmd = 'hive -f %s --define output_path=%s --define hive_date=%s' % (hive_hql, output_dir, hive_date)
+    cmd = 'hive -f %s --define output_path=%s --define hive_date=%s --define start_date=%s' % (hive_hql, output_dir, hive_date, start_date)
     util.exe_cmd_system(cmd, True)
     util.hadoop_touch_success(output_path)
 

@@ -9,6 +9,24 @@ import time
 import datetime
 
 
+# 安全护栏：所有 hadoop 写/删操作必须落在以下前缀下
+SAFE_HDFS_PREFIX = 'hdfs://ns82004/user/mart_ads/mart_ads_delivery/user/chenke188'
+
+
+def _assert_safe_path(hadoop_path):
+    """确保 hadoop_path 在 chenke188 自己的目录下，且不是顶级目录本身"""
+    p = hadoop_path.strip()
+    if not p.startswith(SAFE_HDFS_PREFIX + '/'):
+        msg = 'UNSAFE PATH refused: [%s], must start with [%s/]' % (p, SAFE_HDFS_PREFIX)
+        logging.error(msg)
+        sys.exit(msg)
+    # 防止 dt= 后面是空串，导致整个 sku_roi_simple 被删
+    if p.endswith('/dt=') or p.endswith('dt=') or p.endswith('/'):
+        msg = 'SUSPICIOUS PATH refused: [%s], looks like an empty date partition' % p
+        logging.error(msg)
+        sys.exit(msg)
+
+
 def exe_cmd_system(cmd, exit=True):
     logging.info(cmd)
     ret = os.system(cmd)
@@ -24,11 +42,13 @@ def exe_cmd_system(cmd, exit=True):
 
 
 def hadoop_remove(hadoop_path, exit=False):
+    _assert_safe_path(hadoop_path)
     cmd = 'hadoop fs -rm -r %s' % hadoop_path
     exe_cmd_system(cmd, exit)
 
 
 def hadoop_touch_success(hadoop_path):
+    _assert_safe_path(hadoop_path)
     cmd = 'hadoop fs -touchz %s/_SUCCESS' % hadoop_path
     exe_cmd_system(cmd, True)
 
